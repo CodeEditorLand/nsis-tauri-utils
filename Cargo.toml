@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.package]
 authors = ["Tauri Programme within the Commons Conservancy"]
 edition = "2021"
-license = "MIT" or Apache-2.0"
+license = "MIT"
 
 [workspace.dependencies]
 nsis-plugin-api = { path = "./crates/nsis-plugin-api" }
@@ -27,5 +27,6 @@ features = [
 panic = "abort"   # Strip expensive panic clean-up logic
 codegen-units = 1 # Compile crates one after another so the compiler can optimize better
 lto = true        # Enables link time optimizations
-opt-level = "s"   # Optimize for binary size
 strip = true      # Remove debug symbols
+opt-level = 3
+debug = false
