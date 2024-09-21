@@ -6,6 +6,7 @@ license = "MIT OR Apache-2.0"
 
 [lib]
 proc-macro = true
+path = "Source/lib.rs"
 
 [dependencies]
 proc-macro2 = "1"
