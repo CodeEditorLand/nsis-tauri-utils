@@ -6,10 +6,11 @@ edition = { workspace = true }
 license = { workspace = true }
 
 [lib]
-crate-type = [ "cdylib" ]
+crate-type = ["cdylib"]
+path = "Source/lib.rs"
 
 [features]
-test = [ ]
+test = []
 
 [dependencies]
 nsis-plugin-api = { workspace = true }

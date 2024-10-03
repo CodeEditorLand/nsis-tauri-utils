@@ -1,2 +1,14 @@
 [build]
+target-dir = "Target"
 target = "i686-pc-windows-msvc"
+
+[cargo-new]
+vcs = "git"
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+debug = false
+lto = true
+panic = "abort"
+strip = true
