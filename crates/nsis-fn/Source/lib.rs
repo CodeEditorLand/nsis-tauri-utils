@@ -4,21 +4,22 @@ use quote::quote;
 use syn::{parse::Parse, parse_macro_input, Ident, ItemFn};
 
 struct NsisFn {
-	func: ItemFn,
+	func:ItemFn,
 }
 
 impl Parse for NsisFn {
-	fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-		let func: ItemFn = input.parse()?;
+	fn parse(input:syn::parse::ParseStream) -> syn::Result<Self> {
+		let func:ItemFn = input.parse()?;
 		Ok(Self { func })
 	}
 }
 
-/// Generates a wrapper NSIS compliant dll export that calls `nsis_plugin_api::exdll_init`
-/// automatically. This macro expects the function to return a `Result<(), nsis_plugin_api::Error>`
-/// and will automatically push the error to NSIS stack on failure.
+/// Generates a wrapper NSIS compliant dll export that calls
+/// `nsis_plugin_api::exdll_init` automatically. This macro expects the function
+/// to return a `Result<(), nsis_plugin_api::Error>` and will automatically push
+/// the error to NSIS stack on failure.
 #[proc_macro_attribute]
-pub fn nsis_fn(_attr: TokenStream, tokens: TokenStream) -> TokenStream {
+pub fn nsis_fn(_attr:TokenStream, tokens:TokenStream) -> TokenStream {
 	let tokens = parse_macro_input!(tokens as NsisFn);
 	let NsisFn { func } = tokens;
 

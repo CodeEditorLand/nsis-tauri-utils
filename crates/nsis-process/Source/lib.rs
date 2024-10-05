@@ -12,20 +12,48 @@ use core::{
 
 use nsis_plugin_api::*;
 use windows_sys::Win32::{
-	Foundation::{CloseHandle, GetLastError, ERROR_INSUFFICIENT_BUFFER, FALSE, HANDLE, TRUE},
-	Security::{EqualSid, GetTokenInformation, TokenUser, TOKEN_QUERY, TOKEN_USER},
+	Foundation::{
+		CloseHandle,
+		GetLastError,
+		ERROR_INSUFFICIENT_BUFFER,
+		FALSE,
+		HANDLE,
+		TRUE,
+	},
+	Security::{
+		EqualSid,
+		GetTokenInformation,
+		TokenUser,
+		TOKEN_QUERY,
+		TOKEN_USER,
+	},
 	System::{
 		Diagnostics::ToolHelp::{
-			CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+			CreateToolhelp32Snapshot,
+			Process32FirstW,
+			Process32NextW,
+			PROCESSENTRY32W,
 			TH32CS_SNAPPROCESS,
 		},
 		Threading::{
-			CreateProcessW, GetCurrentProcessId, InitializeProcThreadAttributeList, OpenProcess,
-			OpenProcessToken, TerminateProcess, UpdateProcThreadAttribute,
-			CREATE_NEW_PROCESS_GROUP, CREATE_UNICODE_ENVIRONMENT, EXTENDED_STARTUPINFO_PRESENT,
-			LPPROC_THREAD_ATTRIBUTE_LIST, PROCESS_CREATE_PROCESS, PROCESS_INFORMATION,
-			PROCESS_QUERY_INFORMATION, PROCESS_TERMINATE, PROC_THREAD_ATTRIBUTE_PARENT_PROCESS,
-			STARTUPINFOEXW, STARTUPINFOW,
+			CreateProcessW,
+			GetCurrentProcessId,
+			InitializeProcThreadAttributeList,
+			OpenProcess,
+			OpenProcessToken,
+			TerminateProcess,
+			UpdateProcThreadAttribute,
+			CREATE_NEW_PROCESS_GROUP,
+			CREATE_UNICODE_ENVIRONMENT,
+			EXTENDED_STARTUPINFO_PRESENT,
+			LPPROC_THREAD_ATTRIBUTE_LIST,
+			PROCESS_CREATE_PROCESS,
+			PROCESS_INFORMATION,
+			PROCESS_QUERY_INFORMATION,
+			PROCESS_TERMINATE,
+			PROC_THREAD_ATTRIBUTE_PARENT_PROCESS,
+			STARTUPINFOEXW,
+			STARTUPINFOW,
 		},
 	},
 	UI::WindowsAndMessaging::{GetShellWindow, GetWindowThreadProcessId},
@@ -33,27 +61,28 @@ use windows_sys::Win32::{
 
 nsis_plugin!();
 
-/// Test if there is a running process with the given name, skipping processes with the host's pid. The input and process names are case-insensitive.
+/// Test if there is a running process with the given name, skipping processes
+/// with the host's pid. The input and process names are case-insensitive.
 ///
 /// # Safety
 ///
-/// This function always expects 1 string on the stack ($1: name) and will panic otherwise.
+/// This function always expects 1 string on the stack ($1: name) and will panic
+/// otherwise.
 #[nsis_fn]
 fn FindProcess() -> Result<(), Error> {
 	let name = popstr()?;
 
-	if !get_processes(&name).is_empty() {
-		push(ZERO)
-	} else {
-		push(ONE)
-	}
+	if !get_processes(&name).is_empty() { push(ZERO) } else { push(ONE) }
 }
 
-/// Test if there is a running process with the given name that belongs to the current user, skipping processes with the host's pid. The input and process names are case-insensitive.
+/// Test if there is a running process with the given name that belongs to the
+/// current user, skipping processes with the host's pid. The input and process
+/// names are case-insensitive.
 ///
 /// # Safety
 ///
-/// This function always expects 1 string on the stack ($1: name) and will panic otherwise.
+/// This function always expects 1 string on the stack ($1: name) and will panic
+/// otherwise.
 #[nsis_fn]
 fn FindProcessCurrentUser() -> Result<(), Error> {
 	let name = popstr()?;
@@ -74,11 +103,13 @@ fn FindProcessCurrentUser() -> Result<(), Error> {
 	}
 }
 
-/// Kill all running process with the given name, skipping processes with the host's pid. The input and process names are case-insensitive.
+/// Kill all running process with the given name, skipping processes with the
+/// host's pid. The input and process names are case-insensitive.
 ///
 /// # Safety
 ///
-/// This function always expects 1 string on the stack ($1: name) and will panic otherwise.
+/// This function always expects 1 string on the stack ($1: name) and will panic
+/// otherwise.
 #[nsis_fn]
 fn KillProcess() -> Result<(), Error> {
 	let name = popstr()?;
@@ -92,11 +123,14 @@ fn KillProcess() -> Result<(), Error> {
 	}
 }
 
-/// Kill all running process with the given name that belong to the current user, skipping processes with the host's pid. The input and process names are case-insensitive.
+/// Kill all running process with the given name that belong to the current
+/// user, skipping processes with the host's pid. The input and process names
+/// are case-insensitive.
 ///
 /// # Safety
 ///
-/// This function always expects 1 string on the stack ($1: name) and will panic otherwise.
+/// This function always expects 1 string on the stack ($1: name) and will panic
+/// otherwise.
 #[nsis_fn]
 fn KillProcessCurrentUser() -> Result<(), Error> {
 	let name = popstr()?;
@@ -108,16 +142,16 @@ fn KillProcessCurrentUser() -> Result<(), Error> {
 	}
 
 	let success = if let Some(user_sid) = get_sid(GetCurrentProcessId()) {
-		processes.into_iter().filter(|pid| belongs_to_user(user_sid, *pid)).map(kill).all(|b| b)
+		processes
+			.into_iter()
+			.filter(|pid| belongs_to_user(user_sid, *pid))
+			.map(kill)
+			.all(|b| b)
 	} else {
 		processes.into_iter().map(kill).all(|b| b)
 	};
 
-	if success {
-		push(ZERO)
-	} else {
-		push(ONE)
-	}
+	if success { push(ZERO) } else { push(ONE) }
 }
 
 /// Run program as unelevated user
@@ -129,21 +163,19 @@ fn KillProcessCurrentUser() -> Result<(), Error> {
 fn RunAsUser() -> Result<(), Error> {
 	let program = popstr()?;
 	let arguments = popstr()?;
-	if run_as_user(&program, &arguments) {
-		push(ZERO)
-	} else {
-		push(ONE)
-	}
+	if run_as_user(&program, &arguments) { push(ZERO) } else { push(ONE) }
 }
 
-unsafe fn belongs_to_user(user_sid: *mut c_void, pid: u32) -> bool {
+unsafe fn belongs_to_user(user_sid:*mut c_void, pid:u32) -> bool {
 	let p_sid = get_sid(pid);
-	// Trying to get the sid of a process of another user will give us an "Access Denied" error.
-	// TODO: Consider checking for HRESULT(0x80070005) if we want to return true for other errors to try and kill those processes later.
+	// Trying to get the sid of a process of another user will give us an
+	// "Access Denied" error. TODO: Consider checking for HRESULT(0x80070005)
+	// if we want to return true for other errors to try and kill those
+	// processes later.
 	p_sid.map(|p_sid| EqualSid(user_sid, p_sid) != FALSE).unwrap_or_default()
 }
 
-fn kill(pid: u32) -> bool {
+fn kill(pid:u32) -> bool {
 	unsafe {
 		let handle = OwnedHandle::new(OpenProcess(PROCESS_TERMINATE, 0, pid));
 		TerminateProcess(*handle, 1) == TRUE
@@ -151,8 +183,9 @@ fn kill(pid: u32) -> bool {
 }
 
 // Get the SID of a process. Returns None on error.
-unsafe fn get_sid(pid: u32) -> Option<*mut c_void> {
-	let handle = OwnedHandle::new(OpenProcess(PROCESS_QUERY_INFORMATION, 0, pid));
+unsafe fn get_sid(pid:u32) -> Option<*mut c_void> {
+	let handle =
+		OwnedHandle::new(OpenProcess(PROCESS_QUERY_INFORMATION, 0, pid));
 	if handle.is_invalid() {
 		return None;
 	}
@@ -163,8 +196,15 @@ unsafe fn get_sid(pid: u32) -> Option<*mut c_void> {
 	}
 
 	let mut info_length = 0;
-	GetTokenInformation(*token_handle, TokenUser, ptr::null_mut(), 0, &mut info_length);
-	// GetTokenInformation always returns 0 for the first call so we check if it still gave us the buffer length
+	GetTokenInformation(
+		*token_handle,
+		TokenUser,
+		ptr::null_mut(),
+		0,
+		&mut info_length,
+	);
+	// GetTokenInformation always returns 0 for the first call so we check if it
+	// still gave us the buffer length
 	if info_length == 0 {
 		return None;
 	}
@@ -185,20 +225,24 @@ unsafe fn get_sid(pid: u32) -> Option<*mut c_void> {
 	}
 }
 
-fn get_processes(name: &str) -> Vec<u32> {
+fn get_processes(name:&str) -> Vec<u32> {
 	let current_pid = unsafe { GetCurrentProcessId() };
 	let mut processes = Vec::new();
 
 	unsafe {
-		let handle = OwnedHandle::new(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+		let handle =
+			OwnedHandle::new(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
 
-		let mut process =
-			PROCESSENTRY32W { dwSize: mem::size_of::<PROCESSENTRY32W>() as u32, ..mem::zeroed() };
+		let mut process = PROCESSENTRY32W {
+			dwSize:mem::size_of::<PROCESSENTRY32W>() as u32,
+			..mem::zeroed()
+		};
 
 		if Process32FirstW(*handle, &mut process) == TRUE {
 			while Process32NextW(*handle, &mut process) == TRUE {
 				if current_pid != process.th32ProcessID
-					&& decode_utf16_lossy(&process.szExeFile).to_lowercase() == name.to_lowercase()
+					&& decode_utf16_lossy(&process.szExeFile).to_lowercase()
+						== name.to_lowercase()
 				{
 					processes.push(process.th32ProcessID);
 				}
@@ -212,7 +256,7 @@ fn get_processes(name: &str) -> Vec<u32> {
 /// Return true if success
 ///
 /// Ported from https://devblogs.microsoft.com/oldnewthing/20190425-00/?p=102443
-unsafe fn run_as_user(program: &str, arguments: &str) -> bool {
+unsafe fn run_as_user(program:&str, arguments:&str) -> bool {
 	let hwnd = GetShellWindow();
 	if hwnd.is_null() {
 		return false;
@@ -223,13 +267,18 @@ unsafe fn run_as_user(program: &str, arguments: &str) -> bool {
 		return false;
 	}
 
-	let process = OwnedHandle::new(OpenProcess(PROCESS_CREATE_PROCESS, FALSE, proccess_id));
+	let process = OwnedHandle::new(OpenProcess(
+		PROCESS_CREATE_PROCESS,
+		FALSE,
+		proccess_id,
+	));
 	if process.is_invalid() {
 		return false;
 	}
 
 	let mut size = 0;
-	if !(InitializeProcThreadAttributeList(ptr::null_mut(), 1, 0, &mut size) == FALSE
+	if !(InitializeProcThreadAttributeList(ptr::null_mut(), 1, 0, &mut size)
+		== FALSE
 		&& GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 	{
 		return false;
@@ -237,7 +286,9 @@ unsafe fn run_as_user(program: &str, arguments: &str) -> bool {
 
 	let mut buffer = vec![0u8; size];
 	let attribute_list = buffer.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST;
-	if InitializeProcThreadAttributeList(attribute_list, 1, 0, &mut size) == FALSE {
+	if InitializeProcThreadAttributeList(attribute_list, 1, 0, &mut size)
+		== FALSE
+	{
 		return false;
 	}
 
@@ -255,10 +306,13 @@ unsafe fn run_as_user(program: &str, arguments: &str) -> bool {
 	}
 
 	let startup_info = STARTUPINFOEXW {
-		StartupInfo: STARTUPINFOW { cb: mem::size_of::<STARTUPINFOEXW>() as _, ..mem::zeroed() },
-		lpAttributeList: attribute_list,
+		StartupInfo:STARTUPINFOW {
+			cb:mem::size_of::<STARTUPINFOEXW>() as _,
+			..mem::zeroed()
+		},
+		lpAttributeList:attribute_list,
 	};
-	let mut process_info: PROCESS_INFORMATION = mem::zeroed();
+	let mut process_info:PROCESS_INFORMATION = mem::zeroed();
 	let mut command_line = "\"".to_owned() + program + "\"";
 	if !arguments.is_empty() {
 		command_line.push(' ');
@@ -271,7 +325,9 @@ unsafe fn run_as_user(program: &str, arguments: &str) -> bool {
 		ptr::null(),
 		ptr::null(),
 		FALSE,
-		CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_PROCESS_GROUP | EXTENDED_STARTUPINFO_PRESENT,
+		CREATE_UNICODE_ENVIRONMENT
+			| CREATE_NEW_PROCESS_GROUP
+			| EXTENDED_STARTUPINFO_PRESENT,
 		ptr::null(),
 		ptr::null(),
 		&startup_info as *const _ as _,
@@ -289,13 +345,9 @@ unsafe fn run_as_user(program: &str, arguments: &str) -> bool {
 struct OwnedHandle(HANDLE);
 
 impl OwnedHandle {
-	fn new(handle: HANDLE) -> Self {
-		Self(handle)
-	}
+	fn new(handle:HANDLE) -> Self { Self(handle) }
 
-	fn is_invalid(&self) -> bool {
-		self.0.is_null()
-	}
+	fn is_invalid(&self) -> bool { self.0.is_null() }
 }
 
 impl Drop for OwnedHandle {
@@ -309,15 +361,11 @@ impl Drop for OwnedHandle {
 impl Deref for OwnedHandle {
 	type Target = HANDLE;
 
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
+	fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl DerefMut for OwnedHandle {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.0
-	}
+	fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
 }
 
 #[cfg(test)]
@@ -335,14 +383,13 @@ mod tests {
 	fn kill_process() {
 		let processes = get_processes("something_that_doesnt_exist.exe");
 		// TODO: maybe find some way to spawn a dummy process we can kill here?
-		// This will return true on empty iterators so it's basically no-op right now
+		// This will return true on empty iterators so it's basically no-op
+		// right now
 		assert!(processes.into_iter().map(kill).all(|b| b));
 	}
 
 	#[test]
-	fn spawn_cmd() {
-		unsafe { run_as_user("cmd", "/c timeout 3") };
-	}
+	fn spawn_cmd() { unsafe { run_as_user("cmd", "/c timeout 3") }; }
 
 	#[test]
 	#[cfg(feature = "test")]
@@ -355,14 +402,17 @@ mod tests {
 		let dir = current.join("dir space");
 		std::fs::create_dir_all(&dir).unwrap();
 
-		let systemroot = std::env::var("SYSTEMROOT").unwrap_or_else(|_| "C:\\Windows".to_owned());
+		let systemroot = std::env::var("SYSTEMROOT")
+			.unwrap_or_else(|_| "C:\\Windows".to_owned());
 
 		let cmd = format!("{systemroot}\\System32\\cmd.exe");
 		let cmd_out = dir.join("cmdout.exe");
 
 		std::fs::copy(cmd, &cmd_out).unwrap();
 
-		assert!(unsafe { run_as_user(cmd_out.display().to_string().as_str(), "/c timeout 3") });
+		assert!(unsafe {
+			run_as_user(cmd_out.display().to_string().as_str(), "/c timeout 3")
+		});
 
 		std::thread::sleep(std::time::Duration::from_secs(5));
 		std::fs::remove_file(cmd_out).unwrap();

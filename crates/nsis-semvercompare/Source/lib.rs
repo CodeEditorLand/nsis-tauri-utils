@@ -13,7 +13,8 @@ nsis_plugin!();
 ///
 /// # Safety
 ///
-/// This function always expects 2 strings on the stack ($v1, $v2) and will panic otherwise.
+/// This function always expects 2 strings on the stack ($v1, $v2) and will
+/// panic otherwise.
 #[nsis_fn]
 fn SemverCompare() -> Result<(), Error> {
 	let v1 = popstr()?;
@@ -29,7 +30,7 @@ fn SemverCompare() -> Result<(), Error> {
 	Ok(())
 }
 
-fn compare(v1: &str, v2: &str) -> i32 {
+fn compare(v1:&str, v2:&str) -> i32 {
 	let v1 = Version::parse(v1);
 	let v2 = Version::parse(v2);
 

@@ -10,8 +10,9 @@ fn main() {
 /// Combines the plugins into one file that is included in lib.rs
 /// using `include!(concat!(env!("OUT_DIR"), "/combined_libs.rs"));`
 ///
-/// Plugins are combined this way because it saves a few kilobytes in the generated DLL
-/// than the making nsis-tauri-utils depend on other plugins and re-export the DLLs
+/// Plugins are combined this way because it saves a few kilobytes in the
+/// generated DLL than the making nsis-tauri-utils depend on other plugins and
+/// re-export the DLLs
 fn combine_plugins_and_write_to_out_dir() {
 	let out_dir = std::env::var("OUT_DIR").unwrap();
 	let path = format!("{out_dir}/combined_libs.rs");
