@@ -53,11 +53,7 @@ pub static mut G_STACKTOP:*mut *mut stack_t = core::ptr::null_mut();
 /// This function mutates static variables and should only be called in a
 /// function
 #[inline(always)]
-pub unsafe fn exdll_init(
-	string_size:c_int,
-	variables:*mut wchar_t,
-	stacktop:*mut *mut stack_t,
-) {
+pub unsafe fn exdll_init(string_size:c_int, variables:*mut wchar_t, stacktop:*mut *mut stack_t) {
 	G_STRINGSIZE = string_size;
 	G_VARIABLES = variables;
 	G_STACKTOP = stacktop;
@@ -174,11 +170,7 @@ pub fn encode_utf16(str:&str) -> Vec<u16> {
 }
 
 pub fn decode_utf16_lossy(bytes:&[u16]) -> String {
-	let bytes = bytes
-		.iter()
-		.position(|c| *c == 0)
-		.map(|nul| &bytes[..nul])
-		.unwrap_or(bytes);
+	let bytes = bytes.iter().position(|c| *c == 0).map(|nul| &bytes[..nul]).unwrap_or(bytes);
 	String::from_utf16_lossy(bytes)
 }
 
@@ -200,18 +192,8 @@ unsafe impl GlobalAlloc for Heapalloc {
 		HeapFree(GetProcessHeap(), 0, ptr as *mut c_void);
 	}
 
-	unsafe fn realloc(
-		&self,
-		ptr:*mut u8,
-		_layout:Layout,
-		new_size:usize,
-	) -> *mut u8 {
-		HeapReAlloc(
-			GetProcessHeap(),
-			HEAP_ZERO_MEMORY,
-			ptr as *mut c_void,
-			new_size,
-		) as *mut u8
+	unsafe fn realloc(&self, ptr:*mut u8, _layout:Layout, new_size:usize) -> *mut u8 {
+		HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, ptr as *mut c_void, new_size) as *mut u8
 	}
 }
 

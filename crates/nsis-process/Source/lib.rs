@@ -12,21 +12,8 @@ use core::{
 
 use nsis_plugin_api::*;
 use windows_sys::Win32::{
-	Foundation::{
-		CloseHandle,
-		GetLastError,
-		ERROR_INSUFFICIENT_BUFFER,
-		FALSE,
-		HANDLE,
-		TRUE,
-	},
-	Security::{
-		EqualSid,
-		GetTokenInformation,
-		TokenUser,
-		TOKEN_QUERY,
-		TOKEN_USER,
-	},
+	Foundation::{CloseHandle, GetLastError, ERROR_INSUFFICIENT_BUFFER, FALSE, HANDLE, TRUE},
+	Security::{EqualSid, GetTokenInformation, TokenUser, TOKEN_QUERY, TOKEN_USER},
 	System::{
 		Diagnostics::ToolHelp::{
 			CreateToolhelp32Snapshot,
@@ -184,8 +171,7 @@ fn kill(pid:u32) -> bool {
 
 // Get the SID of a process. Returns None on error.
 unsafe fn get_sid(pid:u32) -> Option<*mut c_void> {
-	let handle =
-		OwnedHandle::new(OpenProcess(PROCESS_QUERY_INFORMATION, 0, pid));
+	let handle = OwnedHandle::new(OpenProcess(PROCESS_QUERY_INFORMATION, 0, pid));
 	if handle.is_invalid() {
 		return None;
 	}
@@ -196,13 +182,7 @@ unsafe fn get_sid(pid:u32) -> Option<*mut c_void> {
 	}
 
 	let mut info_length = 0;
-	GetTokenInformation(
-		*token_handle,
-		TokenUser,
-		ptr::null_mut(),
-		0,
-		&mut info_length,
-	);
+	GetTokenInformation(*token_handle, TokenUser, ptr::null_mut(), 0, &mut info_length);
 	// GetTokenInformation always returns 0 for the first call so we check if it
 	// still gave us the buffer length
 	if info_length == 0 {
@@ -230,19 +210,15 @@ fn get_processes(name:&str) -> Vec<u32> {
 	let mut processes = Vec::new();
 
 	unsafe {
-		let handle =
-			OwnedHandle::new(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+		let handle = OwnedHandle::new(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
 
-		let mut process = PROCESSENTRY32W {
-			dwSize:mem::size_of::<PROCESSENTRY32W>() as u32,
-			..mem::zeroed()
-		};
+		let mut process =
+			PROCESSENTRY32W { dwSize:mem::size_of::<PROCESSENTRY32W>() as u32, ..mem::zeroed() };
 
 		if Process32FirstW(*handle, &mut process) == TRUE {
 			while Process32NextW(*handle, &mut process) == TRUE {
 				if current_pid != process.th32ProcessID
-					&& decode_utf16_lossy(&process.szExeFile).to_lowercase()
-						== name.to_lowercase()
+					&& decode_utf16_lossy(&process.szExeFile).to_lowercase() == name.to_lowercase()
 				{
 					processes.push(process.th32ProcessID);
 				}
@@ -267,18 +243,13 @@ unsafe fn run_as_user(program:&str, arguments:&str) -> bool {
 		return false;
 	}
 
-	let process = OwnedHandle::new(OpenProcess(
-		PROCESS_CREATE_PROCESS,
-		FALSE,
-		proccess_id,
-	));
+	let process = OwnedHandle::new(OpenProcess(PROCESS_CREATE_PROCESS, FALSE, proccess_id));
 	if process.is_invalid() {
 		return false;
 	}
 
 	let mut size = 0;
-	if !(InitializeProcThreadAttributeList(ptr::null_mut(), 1, 0, &mut size)
-		== FALSE
+	if !(InitializeProcThreadAttributeList(ptr::null_mut(), 1, 0, &mut size) == FALSE
 		&& GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 	{
 		return false;
@@ -286,9 +257,7 @@ unsafe fn run_as_user(program:&str, arguments:&str) -> bool {
 
 	let mut buffer = vec![0u8; size];
 	let attribute_list = buffer.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST;
-	if InitializeProcThreadAttributeList(attribute_list, 1, 0, &mut size)
-		== FALSE
-	{
+	if InitializeProcThreadAttributeList(attribute_list, 1, 0, &mut size) == FALSE {
 		return false;
 	}
 
@@ -306,10 +275,7 @@ unsafe fn run_as_user(program:&str, arguments:&str) -> bool {
 	}
 
 	let startup_info = STARTUPINFOEXW {
-		StartupInfo:STARTUPINFOW {
-			cb:mem::size_of::<STARTUPINFOEXW>() as _,
-			..mem::zeroed()
-		},
+		StartupInfo:STARTUPINFOW { cb:mem::size_of::<STARTUPINFOEXW>() as _, ..mem::zeroed() },
 		lpAttributeList:attribute_list,
 	};
 	let mut process_info:PROCESS_INFORMATION = mem::zeroed();
@@ -325,9 +291,7 @@ unsafe fn run_as_user(program:&str, arguments:&str) -> bool {
 		ptr::null(),
 		ptr::null(),
 		FALSE,
-		CREATE_UNICODE_ENVIRONMENT
-			| CREATE_NEW_PROCESS_GROUP
-			| EXTENDED_STARTUPINFO_PRESENT,
+		CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_PROCESS_GROUP | EXTENDED_STARTUPINFO_PRESENT,
 		ptr::null(),
 		ptr::null(),
 		&startup_info as *const _ as _,
@@ -402,17 +366,14 @@ mod tests {
 		let dir = current.join("dir space");
 		std::fs::create_dir_all(&dir).unwrap();
 
-		let systemroot = std::env::var("SYSTEMROOT")
-			.unwrap_or_else(|_| "C:\\Windows".to_owned());
+		let systemroot = std::env::var("SYSTEMROOT").unwrap_or_else(|_| "C:\\Windows".to_owned());
 
 		let cmd = format!("{systemroot}\\System32\\cmd.exe");
 		let cmd_out = dir.join("cmdout.exe");
 
 		std::fs::copy(cmd, &cmd_out).unwrap();
 
-		assert!(unsafe {
-			run_as_user(cmd_out.display().to_string().as_str(), "/c timeout 3")
-		});
+		assert!(unsafe { run_as_user(cmd_out.display().to_string().as_str(), "/c timeout 3") });
 
 		std::thread::sleep(std::time::Duration::from_secs(5));
 		std::fs::remove_file(cmd_out).unwrap();
