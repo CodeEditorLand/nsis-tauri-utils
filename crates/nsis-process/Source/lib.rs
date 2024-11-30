@@ -149,7 +149,9 @@ fn KillProcessCurrentUser() -> Result<(), Error> {
 #[nsis_fn]
 fn RunAsUser() -> Result<(), Error> {
 	let program = popstr()?;
+
 	let arguments = popstr()?;
+
 	if run_as_user(&program, &arguments) { push(ZERO) } else { push(ONE) }
 }
 
@@ -165,6 +167,7 @@ unsafe fn belongs_to_user(user_sid:*mut c_void, pid:u32) -> bool {
 fn kill(pid:u32) -> bool {
 	unsafe {
 		let handle = OwnedHandle::new(OpenProcess(PROCESS_TERMINATE, 0, pid));
+
 		TerminateProcess(*handle, 1) == TRUE
 	}
 }
@@ -172,16 +175,19 @@ fn kill(pid:u32) -> bool {
 // Get the SID of a process. Returns None on error.
 unsafe fn get_sid(pid:u32) -> Option<*mut c_void> {
 	let handle = OwnedHandle::new(OpenProcess(PROCESS_QUERY_INFORMATION, 0, pid));
+
 	if handle.is_invalid() {
 		return None;
 	}
 
 	let mut token_handle = OwnedHandle::new(ptr::null_mut());
+
 	if OpenProcessToken(*handle, TOKEN_QUERY, &mut *token_handle) == FALSE {
 		return None;
 	}
 
 	let mut info_length = 0;
+
 	GetTokenInformation(*token_handle, TokenUser, ptr::null_mut(), 0, &mut info_length);
 	// GetTokenInformation always returns 0 for the first call so we check if it
 	// still gave us the buffer length
@@ -190,7 +196,9 @@ unsafe fn get_sid(pid:u32) -> Option<*mut c_void> {
 	}
 
 	let mut buffer = vec![0u8; info_length as usize];
+
 	let info = buffer.as_mut_ptr() as *mut TOKEN_USER;
+
 	if GetTokenInformation(
 		*token_handle,
 		TokenUser,
@@ -207,6 +215,7 @@ unsafe fn get_sid(pid:u32) -> Option<*mut c_void> {
 
 fn get_processes(name:&str) -> Vec<u32> {
 	let current_pid = unsafe { GetCurrentProcessId() };
+
 	let mut processes = Vec::new();
 
 	unsafe {
@@ -234,21 +243,25 @@ fn get_processes(name:&str) -> Vec<u32> {
 /// Ported from https://devblogs.microsoft.com/oldnewthing/20190425-00/?p=102443
 unsafe fn run_as_user(program:&str, arguments:&str) -> bool {
 	let hwnd = GetShellWindow();
+
 	if hwnd.is_null() {
 		return false;
 	}
 
 	let mut proccess_id = 0;
+
 	if GetWindowThreadProcessId(hwnd, &mut proccess_id) == FALSE as u32 {
 		return false;
 	}
 
 	let process = OwnedHandle::new(OpenProcess(PROCESS_CREATE_PROCESS, FALSE, proccess_id));
+
 	if process.is_invalid() {
 		return false;
 	}
 
 	let mut size = 0;
+
 	if !(InitializeProcThreadAttributeList(ptr::null_mut(), 1, 0, &mut size) == FALSE
 		&& GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 	{
@@ -256,7 +269,9 @@ unsafe fn run_as_user(program:&str, arguments:&str) -> bool {
 	}
 
 	let mut buffer = vec![0u8; size];
+
 	let attribute_list = buffer.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST;
+
 	if InitializeProcThreadAttributeList(attribute_list, 1, 0, &mut size) == FALSE {
 		return false;
 	}
@@ -278,10 +293,14 @@ unsafe fn run_as_user(program:&str, arguments:&str) -> bool {
 		StartupInfo:STARTUPINFOW { cb:mem::size_of::<STARTUPINFOEXW>() as _, ..mem::zeroed() },
 		lpAttributeList:attribute_list,
 	};
+
 	let mut process_info:PROCESS_INFORMATION = mem::zeroed();
+
 	let mut command_line = "\"".to_owned() + program + "\"";
+
 	if !arguments.is_empty() {
 		command_line.push(' ');
+
 		command_line.push_str(arguments);
 	}
 
@@ -301,7 +320,9 @@ unsafe fn run_as_user(program:&str, arguments:&str) -> bool {
 		false
 	} else {
 		CloseHandle(process_info.hProcess);
+
 		CloseHandle(process_info.hThread);
+
 		true
 	}
 }
@@ -340,6 +361,7 @@ mod tests {
 	#[test]
 	fn find_process() {
 		let processes = get_processes("explorer.exe");
+
 		assert!(!processes.is_empty());
 	}
 
@@ -359,16 +381,19 @@ mod tests {
 	#[cfg(feature = "test")]
 	fn spawn_with_spaces() {
 		extern crate std;
+
 		use alloc::{format, string::ToString};
 
 		let current = std::env::current_dir().unwrap();
 
 		let dir = current.join("dir space");
+
 		std::fs::create_dir_all(&dir).unwrap();
 
 		let systemroot = std::env::var("SYSTEMROOT").unwrap_or_else(|_| "C:\\Windows".to_owned());
 
 		let cmd = format!("{systemroot}\\System32\\cmd.exe");
+
 		let cmd_out = dir.join("cmdout.exe");
 
 		std::fs::copy(cmd, &cmd_out).unwrap();
@@ -376,6 +401,7 @@ mod tests {
 		assert!(unsafe { run_as_user(cmd_out.display().to_string().as_str(), "/c timeout 3") });
 
 		std::thread::sleep(std::time::Duration::from_secs(5));
+
 		std::fs::remove_file(cmd_out).unwrap();
 	}
 }

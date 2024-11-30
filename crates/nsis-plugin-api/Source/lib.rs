@@ -55,7 +55,9 @@ pub static mut G_STACKTOP:*mut *mut stack_t = core::ptr::null_mut();
 #[inline(always)]
 pub unsafe fn exdll_init(string_size:c_int, variables:*mut wchar_t, stacktop:*mut *mut stack_t) {
 	G_STRINGSIZE = string_size;
+
 	G_VARIABLES = variables;
+
 	G_STACKTOP = stacktop;
 }
 
@@ -92,7 +94,9 @@ pub unsafe fn push(bytes:&[u16]) -> Result<(), Error> {
 	}
 
 	let n = size_of::<stack_t>() + G_STRINGSIZE as usize * 2;
+
 	let th = GlobalAlloc(GPTR, n) as *mut stack_t;
+
 	lstrcpyW((*th).text.as_ptr() as _, bytes.as_ptr());
 	(*th).next = *G_STACKTOP;
 	*G_STACKTOP = th;
@@ -108,6 +112,7 @@ pub unsafe fn push(bytes:&[u16]) -> Result<(), Error> {
 /// [`exdll_init`] is called.
 pub unsafe fn pushstr(str:&str) -> Result<(), Error> {
 	let bytes = encode_utf16(str);
+
 	push(&bytes)
 }
 
@@ -119,6 +124,7 @@ pub unsafe fn pushstr(str:&str) -> Result<(), Error> {
 /// [`exdll_init`] is called.
 pub unsafe fn pushint(int:i32) -> Result<(), Error> {
 	let str = int.to_string();
+
 	pushstr(&str)
 }
 
@@ -136,8 +142,10 @@ pub unsafe fn pop() -> Result<Vec<u16>, Error> {
 	let mut out = vec![0_u16; G_STRINGSIZE as _];
 
 	let th:*mut stack_t = *G_STACKTOP;
+
 	lstrcpyW(out.as_mut_ptr(), (*th).text.as_ptr() as _);
 	*G_STACKTOP = (*th).next;
+
 	GlobalFree(th as _);
 
 	Ok(out)
@@ -151,6 +159,7 @@ pub unsafe fn pop() -> Result<Vec<u16>, Error> {
 /// [`exdll_init`] is called.
 pub unsafe fn popstr() -> Result<String, Error> {
 	let bytes = pop()?;
+
 	Ok(decode_utf16_lossy(&bytes))
 }
 
@@ -162,6 +171,7 @@ pub unsafe fn popstr() -> Result<String, Error> {
 /// [`exdll_init`] is called.
 pub unsafe fn popint() -> Result<i32, Error> {
 	let str = popstr()?;
+
 	str.parse().map_err(|_| Error::ParseIntError)
 }
 
@@ -171,6 +181,7 @@ pub fn encode_utf16(str:&str) -> Vec<u16> {
 
 pub fn decode_utf16_lossy(bytes:&[u16]) -> String {
 	let bytes = bytes.iter().position(|c| *c == 0).map(|nul| &bytes[..nul]).unwrap_or(bytes);
+
 	String::from_utf16_lossy(bytes)
 }
 
@@ -226,10 +237,13 @@ macro_rules! nsis_plugin {
 			n:isize,
 		) -> *mut u8 {
 			let mut i = 0;
+
 			while i < n {
 				*dest.offset(i) = *src.offset(i);
+
 				i += 1;
 			}
+
 			return dest;
 		}
 
@@ -240,24 +254,32 @@ macro_rules! nsis_plugin {
 			n:isize,
 		) -> i32 {
 			let mut i = 0;
+
 			while i < n {
 				let a = *s1.offset(i);
+
 				let b = *s2.offset(i);
+
 				if a != b {
 					return a as i32 - b as i32;
 				}
+
 				i += 1;
 			}
+
 			return 0;
 		}
 
 		#[no_mangle]
 		pub unsafe extern fn memset(s:*mut u8, c:i32, n:isize) -> *mut u8 {
 			let mut i = 0;
+
 			while i < n {
 				*s.offset(i) = c as u8;
+
 				i += 1;
 			}
+
 			return s;
 		}
 	};

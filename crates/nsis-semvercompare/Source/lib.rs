@@ -18,6 +18,7 @@ nsis_plugin!();
 #[nsis_fn]
 fn SemverCompare() -> Result<(), Error> {
 	let v1 = popstr()?;
+
 	let v2 = popstr()?;
 
 	match compare(&v1, &v2) {
@@ -32,6 +33,7 @@ fn SemverCompare() -> Result<(), Error> {
 
 fn compare(v1:&str, v2:&str) -> i32 {
 	let v1 = Version::parse(v1);
+
 	let v2 = Version::parse(v2);
 
 	let (v1, v2) = match (v1, v2) {
