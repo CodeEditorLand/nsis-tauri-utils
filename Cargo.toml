@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.package]
 authors = ["Tauri Programme within the Commons Conservancy"]
 edition = "2021"
-license = "MIT or Apache-2.0"
+license-file = "LICENSE"
 
 [workspace.dependencies]
 nsis-plugin-api = { path = "./crates/nsis-plugin-api" }
