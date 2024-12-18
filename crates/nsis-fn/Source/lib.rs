@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-use syn::{parse::Parse, parse_macro_input, Ident, ItemFn};
+use syn::{Ident, ItemFn, parse::Parse, parse_macro_input};
 
 struct NsisFn {
 	func:ItemFn,

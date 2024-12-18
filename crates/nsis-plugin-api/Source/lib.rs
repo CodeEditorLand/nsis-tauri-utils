@@ -22,13 +22,13 @@ use windows_sys::Win32::{
 	Foundation::GlobalFree,
 	Globalization::{lstrcpyW, lstrcpynW},
 	System::Memory::{
+		GPTR,
 		GetProcessHeap,
 		GlobalAlloc,
+		HEAP_ZERO_MEMORY,
 		HeapAlloc,
 		HeapFree,
 		HeapReAlloc,
-		GPTR,
-		HEAP_ZERO_MEMORY,
 	},
 };
 
