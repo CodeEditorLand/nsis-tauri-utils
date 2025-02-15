@@ -1,16 +1,17 @@
-[package]
-name = "nsis-process"
-version = "0.4.2"
-authors = { workspace = true }
-edition = { workspace = true }
-license = { workspace = true }
-
-[lib]
-crate-type = [ "cdylib" ]
+[dependencies]
+nsis-plugin-api = { workspace = true }
+windows-sys = { workspace = true }
 
 [features]
 test = [ ]
 
-[dependencies]
-nsis-plugin-api = { workspace = true }
-windows-sys = { workspace = true }
+[lib]
+crate-type = [ "cdylib" ]
+path = "Source/lib.rs"
+
+[package]
+authors = { workspace = true }
+edition = { workspace = true }
+license-file = { workspace = true }
+name = "nsis-process"
+version = "0.4.2"
